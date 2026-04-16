@@ -1,0 +1,546 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Detection System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            padding: 10px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background: rgba(20, 20, 35, 0.95);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #00d4ff, #0099ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+            letter-spacing: 0.5px;
+        }
+
+        .camera-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4 / 5;
+            background: #000;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(0, 212, 255, 0.2);
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .detection-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120px;
+            height: 120px;
+            border: 3px solid rgba(0, 212, 255, 0.8);
+            border-radius: 10px;
+            background: rgba(0, 212, 255, 0.05);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3),
+                        inset 0 0 20px rgba(0, 212, 255, 0.1);
+            pointer-events: none;
+            animation: pulseBox 2s ease-in-out infinite;
+        }
+
+        @keyframes pulseBox {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(0, 212, 255, 0.3),
+                            inset 0 0 20px rgba(0, 212, 255, 0.1);
+            }
+            50% {
+                box-shadow: 0 0 40px rgba(0, 212, 255, 0.5),
+                            inset 0 0 30px rgba(0, 212, 255, 0.2);
+            }
+        }
+
+        .corner-mark {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            border: 2px solid rgba(0, 212, 255, 0.8);
+            pointer-events: none;
+        }
+
+        .corner-tl {
+            top: 5px;
+            left: 5px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .corner-tr {
+            top: 5px;
+            right: 5px;
+            border-left: none;
+            border-bottom: none;
+        }
+
+        .corner-bl {
+            bottom: 5px;
+            left: 5px;
+            border-right: none;
+            border-top: none;
+        }
+
+        .corner-br {
+            bottom: 5px;
+            right: 5px;
+            border-left: none;
+            border-top: none;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .scan-btn {
+            background: linear-gradient(135deg, #00d4ff, #0099ff);
+            color: #000;
+            box-shadow: 0 8px 20px rgba(0, 212, 255, 0.4);
+        }
+
+        .scan-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(0, 212, 255, 0.6);
+        }
+
+        .scan-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
+        }
+
+        .reset-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .reset-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .result-box {
+            background: rgba(0, 212, 255, 0.05);
+            border: 2px solid rgba(0, 212, 255, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            display: none;
+            animation: slideUp 0.4s ease;
+        }
+
+        .result-box.show {
+            display: block;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-color {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .result-action {
+            font-size: 18px;
+            font-weight: 700;
+            color: #00d4ff;
+            line-height: 1.4;
+        }
+
+        .result-unknown {
+            font-size: 16px;
+            color: #ff6b6b;
+        }
+
+        .info-text {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            text-align: center;
+            margin-top: 15px;
+            line-height: 1.5;
+        }
+
+        .error-message {
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            color: #ff9999;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 13px;
+            text-align: center;
+            display: none;
+            margin-bottom: 15px;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .status {
+            font-size: 12px;
+            color: rgba(0, 212, 255, 0.7);
+            text-align: center;
+            margin-top: 10px;
+            min-height: 18px;
+        }
+
+        @media (max-height: 700px) {
+            .container {
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .camera-wrapper {
+                margin-bottom: 15px;
+            }
+
+            button {
+                padding: 12px 15px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>COLOR SCAN</h1>
+            <p>Detect Colors • Get Tasks</p>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="camera-wrapper">
+            <video id="videoStream" playsinline autoplay></video>
+            <div class="detection-overlay">
+                <div class="corner-mark corner-tl"></div>
+                <div class="corner-mark corner-tr"></div>
+                <div class="corner-mark corner-bl"></div>
+                <div class="corner-mark corner-br"></div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="scan-btn" id="scanBtn">SCAN</button>
+            <button class="reset-btn" id="resetBtn">RESET</button>
+        </div>
+
+        <div class="result-box" id="resultBox">
+            <div class="result-color" id="resultColor"></div>
+            <div class="result-action" id="resultAction"></div>
+        </div>
+
+        <div class="status" id="status"></div>
+        <div class="info-text">Position color in center box • Tap SCAN</div>
+    </div>
+
+    <canvas id="hiddenCanvas" style="display: none;"></canvas>
+
+    <script>
+        const video = document.getElementById('videoStream');
+        const scanBtn = document.getElementById('scanBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const resultBox = document.getElementById('resultBox');
+        const resultColor = document.getElementById('resultColor');
+        const resultAction = document.getElementById('resultAction');
+        const errorMessage = document.getElementById('errorMessage');
+        const status = document.getElementById('status');
+        const canvas = document.getElementById('hiddenCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const colorMappings = {
+            'Yellow': 'DO 300 JUMPING JACKS EVERY DAY',
+            'Green': 'STUDY FOR 1 HOUR',
+            'Orange': 'DEACTIVATE INSTA FOR 3 DAYS',
+            'Pink': 'DO GUITAR LESSON',
+            'Light Pink': 'DO 30 PUSH-UPS'
+        };
+
+        async function initCamera() {
+            try {
+                errorMessage.classList.remove('show');
+                status.textContent = 'Initializing camera...';
+
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 1600 }
+                    },
+                    audio: false
+                });
+
+                video.srcObject = stream;
+
+                video.onloadedmetadata = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    status.textContent = 'Ready to scan';
+                };
+            } catch (err) {
+                showError('Camera access denied. Please enable camera permissions and reload the page.');
+                console.error('Camera error:', err);
+            }
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('show');
+            status.textContent = '';
+        }
+
+        function rgbToHsv(r, g, b) {
+            r /= 255;
+            g /= 255;
+            b /= 255;
+
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const delta = max - min;
+
+            let h = 0;
+            let s = 0;
+            const v = max;
+
+            if (delta !== 0) {
+                s = delta / max;
+
+                if (max === r) {
+                    h = (g - b) / delta;
+                    if (h < 0) h += 6;
+                } else if (max === g) {
+                    h = (b - r) / delta + 2;
+                } else {
+                    h = (r - g) / delta + 4;
+                }
+                h /= 6;
+            }
+
+            return { h: h * 360, s: s * 100, v: v * 100 };
+        }
+
+        function detectColor(imageData) {
+            const data = imageData.data;
+            const pixelCount = data.length / 4;
+
+            let totalH = 0;
+            let totalS = 0;
+            let totalV = 0;
+            let count = 0;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+
+                // Skip very dark or very bright pixels (likely noise or reflection)
+                const brightness = (r + g + b) / 3;
+                if (brightness < 20 || brightness > 240) continue;
+
+                const hsv = rgbToHsv(r, g, b);
+                totalH += hsv.h;
+                totalS += hsv.s;
+                totalV += hsv.v;
+                count++;
+            }
+
+            if (count === 0) {
+                return null;
+            }
+
+            const avgH = totalH / count;
+            const avgS = totalS / count;
+            const avgV = totalV / count;
+
+            // Require minimum saturation for color detection
+            if (avgS < 25) {
+                return null;
+            }
+
+            // Color detection based on hue ranges
+            if (avgH >= 40 && avgH <= 65) {
+                return 'Yellow';
+            } else if (avgH >= 100 && avgH <= 150) {
+                return 'Green';
+            } else if (avgH >= 15 && avgH < 40) {
+                return 'Orange';
+            } else if (avgH >= 320 && avgH <= 360) {
+                // Deep pink
+                if (avgS > 50 && avgV > 40) {
+                    return 'Pink';
+                }
+                return null;
+            } else if (avgH >= 300 && avgH < 320) {
+                // Light pink
+                if (avgS < 60 && avgV > 60) {
+                    return 'Light Pink';
+                }
+                return 'Pink';
+            }
+
+            return null;
+        }
+
+        function captureAndAnalyze() {
+            if (!video.srcObject) {
+                showError('Camera not initialized');
+                return;
+            }
+
+            // Draw video frame to canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Calculate detection box area (center 120px box scaled to canvas)
+            const videoWidth = video.offsetWidth;
+            const videoHeight = video.offsetHeight;
+            const boxSize = 120;
+            const scaleX = canvas.width / videoWidth;
+            const scaleY = canvas.height / videoHeight;
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const boxHalfSize = (boxSize * scaleX) / 2;
+
+            const startX = centerX - boxHalfSize;
+            const startY = centerY - boxHalfSize;
+            const boxWidth = boxHalfSize * 2;
+            const boxHeight = boxHalfSize * 2;
+
+            // Extract image data from detection box area
+            const imageData = ctx.getImageData(
+                Math.max(0, startX),
+                Math.max(0, startY),
+                Math.min(boxWidth, canvas.width - startX),
+                Math.min(boxHeight, canvas.height - startY)
+            );
+
+            const detectedColor = detectColor(imageData);
+
+            if (detectedColor) {
+                showResult(detectedColor);
+                status.textContent = 'Color detected';
+            } else {
+                showResult(null);
+                status.textContent = 'No valid color detected';
+            }
+        }
+
+        function showResult(color) {
+            resultBox.classList.add('show');
+
+            if (color) {
+                resultColor.textContent = color;
+                resultAction.textContent = colorMappings[color];
+                resultAction.className = 'result-action';
+            } else {
+                resultColor.textContent = 'Unknown Color';
+                resultAction.textContent = 'Unable to detect a valid color. Try adjusting lighting or position.';
+                resultAction.className = 'result-action result-unknown';
+            }
+        }
+
+        function reset() {
+            resultBox.classList.remove('show');
+            errorMessage.classList.remove('show');
+            status.textContent = 'Ready to scan';
+        }
+
+        scanBtn.addEventListener('click', captureAndAnalyze);
+        resetBtn.addEventListener('click', reset);
+
+        // Initialize camera on page load
+        window.addEventListener('load', initCamera);
+
+        // Handle page visibility
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (video.srcObject) {
+                    video.srcObject.getTracks().forEach(track => track.stop());
+                }
+            } else {
+                initCamera();
+            }
+        });
+    </script>
+</body>
+</html>
+```
